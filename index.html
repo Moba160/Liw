@@ -13,6 +13,10 @@
     a { display: block; padding: 1rem 1.2rem; border-radius: 10px; background: #2563eb; color: white; text-decoration: none; font-weight: 700; }
     a:hover { background: #1d4ed8; }
     hr { margin: 2rem 0; border: 0; border-top: 1px solid #cbd5e1; }
+    .instructions { margin-top: 1.5rem; }
+    .instructions li { margin: .75rem 0; }
+    .instructions a { display: inline; padding: 0; border-radius: 0; background: none; color: #2563eb; text-decoration: underline; }
+    .instructions a:hover { background: none; color: #1d4ed8; }
   </style>
 </head>
 <body>
@@ -23,6 +27,15 @@
 
     <p>Hier findest du die OpenSCAD-Datei:</p>
     <a href="3D-Modell.scad">3D-Modell.scad</a>
+
+    <section class="instructions" aria-labelledby="interactive-heading">
+      <h2 id="interactive-heading">Modell interaktiv ansehen</h2>
+      <p>Lade zuerst die <a href="3D-Modell.scad">Datei 3D-Modell.scad</a> aus diesem Repository herunter.</p>
+      <ol>
+        <li>Öffne <a href="https://openscad.ochafik.com/" target="_blank" rel="noopener noreferrer">OpenSCAD im Browser</a>. Das Hochladen von Dateien ist dort ausgegraut. Öffne deshalb die heruntergeladene Datei <strong>3D-Modell.scad</strong> in einem Editor deiner Wahl und kopiere den gesamten Inhalt mit <kbd>Ctrl</kbd>+<kbd>A</kbd>, dann <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+        <li>Ersetze im Browser den Demo-Inhalt: Wähle mit <kbd>Ctrl</kbd>+<kbd>A</kbd> alles aus und füge mit <kbd>Ctrl</kbd>+<kbd>V</kbd> den kopierten Inhalt ein. Hab etwas Geduld – das Rendern dauert etwa eine halbe Minute. Danach lässt sich das Modell flott mit der Maus bewegen. Klicke auf <strong>EDIT</strong>, um den Editor auszublenden und mehr Platz auf dem Bildschirm zu haben.</li>
+      </ol>
+    </section>
 
     <hr>
     <p>Ansichten des Modells:</p>
