@@ -6,45 +6,64 @@
   <title>EG Berlin-Lichterfelde West – H0</title>
   <style>
     :root { color-scheme: light dark; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: #eef1f4; color: #18212b; }
-    main { max-width: 720px; margin: 8vh auto; padding: 2rem; background: rgba(255,255,255,.92); border-radius: 16px; box-shadow: 0 10px 35px rgba(0,0,0,.12); }
-    h1 { margin-top: 0; }
-    nav { display: grid; gap: 12px; }
-    a { display: block; padding: 1rem 1.2rem; border-radius: 10px; background: #2563eb; color: white; text-decoration: none; font-weight: 700; }
-    a:hover { background: #1d4ed8; }
-    hr { margin: 2rem 0; border: 0; border-top: 1px solid #cbd5e1; }
-    .instructions { margin-top: 1.5rem; }
-    .instructions li { margin: .75rem 0; }
-    .instructions a, .file-note a { display: inline; padding: 0; border-radius: 0; background: none; color: #2563eb; text-decoration: underline; }
-    .instructions a:hover, .file-note a:hover { background: none; color: #1d4ed8; }
+    body { margin: 0; padding: 1.25rem; font-family: system-ui, sans-serif; background: #eef1f4; color: #18212b; }
+    main { max-width: 1120px; margin: 0 auto; padding: clamp(1.25rem, 3vw, 2rem); background: rgba(255,255,255,.94); border-radius: 16px; box-shadow: 0 10px 35px rgba(0,0,0,.12); }
+    h1 { margin: 0 0 1.25rem; font-size: clamp(1.5rem, 3vw, 2rem); }
+    h2 { margin: 0 0 .75rem; font-size: 1.2rem; }
+    p { margin: .5rem 0 .75rem; }
+    .columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }
+    section { min-width: 0; padding: 1.25rem; border: 1px solid #d5dde7; border-radius: 12px; background: rgba(255,255,255,.55); }
+    nav { display: grid; gap: .6rem; margin-top: .75rem; }
+    .button { display: block; padding: .8rem 1rem; border-radius: 9px; background: #2563eb; color: white; text-decoration: none; font-weight: 700; }
+    .button:hover { background: #1d4ed8; }
+    .text-link { color: #2563eb; font-weight: 600; }
+    .file-note { font-size: .92rem; color: #425166; }
+    .instructions { margin-top: 1.25rem; }
+    .instructions ol { padding-left: 1.35rem; }
+    .instructions li { margin: .55rem 0; }
+    kbd { font: inherit; font-size: .9em; }
+    @media (max-width: 720px) {
+      body { padding: .75rem; }
+      main { padding: 1.1rem; }
+      .columns { grid-template-columns: 1fr; gap: .85rem; }
+      section { padding: 1rem; }
+    }
   </style>
 </head>
 <body>
   <main>
     <h1>3D-Modell des EG Berlin-Lichterfelde West in H0</h1>
-    <p>Das Projekt wird näher im Stummiforum beschrieben:</p>
-    <a href="https://www.stummiforum.de/t247486f180-H-D-Druck-KI-Experiment-Konstruktion-EG-Berlin-Lichterfelde-West.html">Projektbeschreibung im Stummiforum</a>
+    <div class="columns">
+      <section aria-labelledby="project-heading">
+        <h2 id="project-heading">Projekt &amp; Ansichten</h2>
+        <p>Das Projekt wird näher im Stummiforum beschrieben:</p>
+        <a class="button" href="https://www.stummiforum.de/t247486f180-H-D-Druck-KI-Experiment-Konstruktion-EG-Berlin-Lichterfelde-West.html">Projektbeschreibung im Stummiforum</a>
+        <p>Ansichten des Modells:</p>
+        <nav aria-label="Modellansichten">
+          <a class="button" href="Grundriss.html">Grundriss</a>
+          <a class="button" href="Seitenansichten.html">Seitenansichten</a>
+        </nav>
+      </section>
 
-    <p>Hier findest du die OpenSCAD-Datei:</p>
-    <a href="3D-Modell.scad">3D-Modell.scad</a>
-    <p class="file-note">Die .scad-Datei wird hier nur von Zeit zu Zeit hochgeladen und ist daher möglicherweise nicht auf dem neuesten Stand. Die allerneueste Version kannst du alternativ <a href="https://drive.google.com/file/d/1V1s1oWn7hq_Nh46hVH7hjtsrlCiDVZ7D/view" target="_blank" rel="noopener noreferrer">bei Google Drive beziehen</a>.</p>
+      <section aria-labelledby="model-heading">
+        <h2 id="model-heading">3D-Modell &amp; Drucken</h2>
+        <p>Hier findest du die OpenSCAD-Datei:</p>
+        <a class="button" href="3D-Modell.scad">3D-Modell.scad</a>
+        <p class="file-note">Die .scad-Datei wird hier nur von Zeit zu Zeit hochgeladen und ist daher möglicherweise nicht auf dem neuesten Stand. Die allerneueste Version kannst du alternativ bei Google Drive beziehen.</p>
+        <nav aria-label="3D-Modell und Druckhinweise">
+          <a class="button" href="Druckhinweise.html">Druckhinweise (Resindruck)</a>
+        </nav>
 
-    <section class="instructions" aria-labelledby="interactive-heading">
-      <h2 id="interactive-heading">Modell interaktiv ansehen</h2>
-      <p>Lade zuerst die <a href="3D-Modell.scad">Datei 3D-Modell.scad</a> aus diesem Repository herunter.</p>
-      <ol>
-        <li>Öffne <a href="https://openscad.ochafik.com/" target="_blank" rel="noopener noreferrer">OpenSCAD im Browser</a>. Das Hochladen von Dateien ist dort ausgegraut. Öffne deshalb die heruntergeladene Datei <strong>3D-Modell.scad</strong> in einem Editor deiner Wahl und kopiere den gesamten Inhalt mit <kbd>Ctrl</kbd>+<kbd>A</kbd>, dann <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
-        <li>Ersetze im Browser den Demo-Inhalt: Wähle mit <kbd>Ctrl</kbd>+<kbd>A</kbd> alles aus und füge mit <kbd>Ctrl</kbd>+<kbd>V</kbd> den kopierten Inhalt ein. Hab etwas Geduld – das Rendern dauert etwa eine halbe Minute. Danach lässt sich das Modell flott mit der Maus bewegen. Klicke auf <strong>EDIT</strong>, um den Editor auszublenden und mehr Platz auf dem Bildschirm zu haben.</li>
-      </ol>
-    </section>
-
-    <hr>
-    <p>Ansichten des Modells:</p>
-    <nav>
-      <a href="Grundriss.html">Grundriss</a>
-      <a href="Seitenansichten.html">Seitenansichten</a>
-      <a href="Druckhinweise.html">Druckhinweise (Resindruck)</a>
-    </nav>
+        <div class="instructions">
+          <h2>Modell interaktiv ansehen</h2>
+          <p>Lade zuerst die <a class="text-link" href="3D-Modell.scad">Datei 3D-Modell.scad</a> aus diesem Repository herunter.</p>
+          <ol>
+            <li>Öffne <a class="text-link" href="https://openscad.ochafik.com/" target="_blank" rel="noopener noreferrer">OpenSCAD im Browser</a>. Das Hochladen von Dateien ist dort ausgegraut. Öffne deshalb die heruntergeladene Datei <strong>3D-Modell.scad</strong> in einem Editor deiner Wahl und kopiere den gesamten Inhalt mit <kbd>Ctrl</kbd>+<kbd>A</kbd>, dann <kbd>Ctrl</kbd>+<kbd>C</kbd>.</li>
+            <li>Ersetze im Browser den Demo-Inhalt: Wähle mit <kbd>Ctrl</kbd>+<kbd>A</kbd> alles aus und füge mit <kbd>Ctrl</kbd>+<kbd>V</kbd> den kopierten Inhalt ein. Hab etwas Geduld – das Rendern dauert etwa eine halbe Minute. Danach lässt sich das Modell flott mit der Maus bewegen. Klicke auf <strong>EDIT</strong>, um den Editor auszublenden und mehr Platz auf dem Bildschirm zu haben.</li>
+          </ol>
+        </div>
+      </section>
+    </div>
   </main>
 </body>
 </html>
