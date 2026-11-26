@@ -393,7 +393,9 @@ y_ann  = [1.21, y_pav[1]]; // Aufmaß z2 = 1,21 (Front, Straßenseite) bis Rück
 y_anns = y_ann[0] + ANN_TIEFE_VORN;   // Front des zurückspringenden linken Teils
 
 // ---------- Höhen (z) ----------
-ANN_TRAUFE_REIHEN = 45;   // Traufkante des Anbaus: Oberkante der letzten Ziegelreihe, gezählt ab Beginn des gelben Mauerwerks
+ANN_TRAUFE_REIHEN = 34;   // Traufkante des Anbaus: Oberkante der letzten Ziegelreihe, gezählt ab Beginn des gelben Mauerwerks.
+                          // Nach Foto: Die Unterkante des braunen Dachkastens (tiefste Kante, ca. 0,27 m unter dem Wandkopf) liegt 5 Reihen über dem
+                          // zweiten roten Streifen des Pavillons (Reihe 24, Oberkante bei 25 Reihen) = 30 Reihen -> Wandkopf bei 30 + 3,6 = 34 Reihen
 h_ann   = z_y0 + ANN_TRAUFE_REIHEN * Z_PZ - Z_FUGE;   // Anbau: Wandkopf = Traufkante, umlaufend waagerecht (auf dem Ziegelraster)
 a_ann   = 0;       // Anbau: Dachneigung (0 = flach, Traufkante überall gleich hoch; > 0 neigt das Dach nach links und die Traufe schräg)
 o_ann   = 0.5;     // Anbau: Dachüberstand
@@ -505,8 +507,7 @@ PAV_FIRST_LAENGE = 4.5;                             // Länge des Firstes [m rea
 pav_hh   = (x_pav1 - x_pav0) / 2 * tan(a_pav);  // Firsthöhe über der Traufe (Spannweite in x, First läuft in y)
 a_pav_e  = atan(pav_hh / ((y_pav[1] - y_pav[0] - PAV_FIRST_LAENGE) / 2));   // Neigung der Walmflächen an Front und Rückseite
 pav_dach_hoch = td + ZF_VORSPRUNG * tan(max(a_pav, a_pav_e)) + 0.005;  // Dachfuß über Oberkante Zierfries
-h_pav   = h_pav_zf + pav_dach_hoch;                 // Pavillon Traufe (Dachfuß)
-h_wing  = h_zw;                                   // Zwischengebäude Traufe (eigenes Traufschema ZW_SCHEMA)
+// h_pav und h_wing (Dachfuß von Pavillon und Zwischengebäude) stehen weiter unten, nach DACHKASTEN, DK_G und a_wing
 h_ris   = SCHEMA_RIS  ? h_traufe : h_ris_alt;     // Risalit Traufe (Giebelfuß)
 h_main  = SCHEMA_MAIN ? h_traufe : h_main_alt;    // rechter Bau Traufe
 // Grüner Dachkasten des Hauptgebäudes (Flügel und Risalite): eine Platte, die sich flach unter die Dachhaut legt, parallel zur
@@ -529,6 +530,13 @@ z_lant1 = h_shaft + td + 0.03 + TURM_DACH_HUB;    // Dachfuß Turm: Unterkante d
 // ---------- Dachneigungen / Überstände ----------
 // a_pav, o_pav (Walmdach Pavillon): siehe Pavillon-Block oben
 a_wing = 22;  o_wing = 0.6;    // Satteldach Zwischengebäude (Traufe parallel x)
+// Dachfuß (Oberkante Dachhaut an der Wand) von Pavillon und Zwischengebäude. Mit Dachkasten liegt er wie am Hauptgebäude um die
+// Plattendicke höher: Die grüne Platte hängt unter der Dachhaut direkt auf dem Zierfries bzw. Zahnfries (Unterkante der Platte an der
+// Wand = Oberkante Fries), so dass sie ihn nicht verdeckt.
+DKP_PAV = DACHKASTEN ? DK_G / cos(max(a_pav, a_pav_e)) : 0;      // senkrechte Plattenhöhe an der Pavillonwand
+DKP_ZW  = DACHKASTEN ? DK_G / cos(a_wing) : 0;                   // dito Zwischengebäude
+h_pav   = h_pav_zf + pav_dach_hoch + DKP_PAV;       // Pavillon Traufe (Dachfuß)
+h_wing  = h_zw + (DACHKASTEN ? td : 0) + DKP_ZW;    // Zwischengebäude Traufe (Dachfuß; Fries h_zw, eigenes Traufschema ZW_SCHEMA)
 o_ris = 0.9;          // Giebel Risalit (Ortgang-Überstand)
 a_ris_h = a_ris;               // gleisseitiger Risalit: Dachneigung des Giebels (muss nach a_ris stehen: OpenSCAD wertet Zuweisungen der Reihe nach aus)
 o_main = 0.8;
@@ -1041,6 +1049,46 @@ module giebel_sparren(g) {
 }
 module giebel_sparren_alle() { for (g = giebel_sparren_liste) giebel_sparren(g); }
 
+// Sparrenköpfe unter den vier Dachkanten des Pavillons (wie im Foto): je ein Balken über jeder Konsole des Bogenfrieses (Konsolen im
+// Abstand der Bogenfelder, ohne die Eckkonsolen) und je ein diagonaler Balken an jeder Ecke (unter dem Walmgrat). Die Balken hängen
+// parallel zur Dachneigung unter der grünen Platte (Oberkante 1 cm in der Platte), beginnen an der Vorderkante des Zierfrieses und enden
+// SPARREN_ZURUECK vor der Dachkante.
+// mode "y": Traufe verläuft in y bei x = wall (Balken in x); mode "x": Traufe in x bei y = wall (Balken in y).
+// s = Richtung nach außen, o = Überstand, c0..c1 = Wandlänge, t = tan(Dachneigung), zb = Oberkante der Balken an der Wand,
+// ex0..ex1 = Bereich quer dazu, in dem keine Balken stehen (dort steht ein anderes Gebäude).
+PAV_SPARREN = true;
+module pav_sparren(mode, wall, s, o, c0, c1, t, zb, ex0 = 1e9, ex1 = -1e9) {
+    d0 = ZF_VORSPRUNG;  d1 = o - SPARREN_ZURUECK;
+    Lw = c1 - c0;  N = max(1, round(Lw / ZF_RASTER));  P = Lw / N;      // gleiche Teilung wie zf_wand2d
+    pr = [[s * d0, zb - d0 * t], [s * d1, zb - d1 * t], [s * d1, zb - d1 * t - SG_H], [s * d0, zb - d0 * t - SG_H]];
+    for (m = [1 : N - 1]) {
+        c = c0 + m * P;
+        if (c < ex0 || c > ex1) {
+            if (mode == "y") translate([wall, c + SG_B / 2, 0]) rotate([90, 0, 0]) linear_extrude(SG_B) polygon(pr);
+            else             translate([c - SG_B / 2, wall, 0]) rotate([90, 0, 90]) linear_extrude(SG_B) polygon(pr);
+        }
+    }
+}
+// Diagonalbalken an einer Ecke (cx, cy): sx, sy = Richtung nach außen; läuft entlang des Walmgrats (Grundriss: von der Wandecke zur Dachecke)
+module pav_sparren_ecke(cx, cy, sx, sy, oe, zb) {
+    lg = sqrt(o_pav * o_pav + oe * oe);                 // waagerechte Länge des Grats bis zur Dachecke
+    tg = o_pav * tan(a_pav) / lg;                       // Gefälle des Grats
+    l0 = ZF_VORSPRUNG * sqrt(2);  l1 = lg - SPARREN_ZURUECK;
+    pr = [[l0, zb - l0 * tg], [l1, zb - l1 * tg], [l1, zb - l1 * tg - SG_H], [l0, zb - l0 * tg - SG_H]];
+    translate([cx, cy, 0]) rotate([0, 0, atan2(sy * oe, sx * o_pav)]) translate([0, SG_B / 2, 0])
+        rotate([90, 0, 0]) linear_extrude(SG_B) polygon(pr);
+}
+module pavillon_sparren() {
+    oe = o_pav * tan(a_pav) / tan(a_pav_e);
+    zb = h_pav - td - DKP_PAV + 0.01;
+    pav_sparren("y", x_pav0, -1, o_pav, y_pav[0], y_pav[1], tan(a_pav), zb);
+    pav_sparren("y", x_pav1,  1, o_pav, y_pav[0], y_pav[1], tan(a_pav), zb, y_wing[0] - SG_B, y_wing[1] + SG_B);   // vor dem Zwischengebäude verdeckt
+    pav_sparren("x", y_pav[0], -1, oe, x_pav0, x_pav1, tan(a_pav_e), zb);
+    pav_sparren("x", y_pav[1],  1, oe, x_pav0, x_pav1, tan(a_pav_e), zb);
+    for (cx = [[x_pav0, -1], [x_pav1, 1]]) for (cy = [[y_pav[0], -1], [y_pav[1], 1]])
+        pav_sparren_ecke(cx[0], cy[0], cx[1], cy[1], oe, zb);
+}
+
 // Dachrinne (Halbrund, Gehrung in den Ecken) mit Rinnenhaltern: reine Halbringe unter der Rinne
 module rinne_vorne() {
     e   = o_tow + 0.01;
@@ -1218,6 +1266,7 @@ module strassen_rinnen() {
     rinne_gerade(rc_x, rw_xe, rw_yax, rw_zax);
     rinne_y(ry_f, rw_yax, rc_x, rw_zax);                      // Rinne an der Risalitseite, trifft im rechten Winkel auf die Traufrinne
     rinne_kappe([rc_x, rw_yax, rw_zax], RINNE_R);
+    {
     // Fallrohr Innenecke Risalit / rechter Flügel
     translate([fr_x, fr_y, FR_Z0]) cylinder(r = FR_R, h = fr_zk - FR_Z0, $fn = 24);
     rohr_stueck([fr_x, fr_y, fr_zk], [fr_gx, rw_yax, fr_gz]);
@@ -1226,7 +1275,204 @@ module strassen_rinnen() {
     translate([tp_x, tp_y, FR_Z0]) cylinder(r = FR_R, h = tp_zt - 0.14 - FR_Z0, $fn = 24);
     translate([tp_x - 0.07, tp_y - 0.06, tp_zt - 0.16]) cube([0.14, 0.12, 0.16]);
     fr_schellen(tp_x, tp_y, FR_Z0, tp_zt - 0.16, y_ris0);
+    }
     if (RINNE_GLEIS) gleis_rinnen();
+}
+
+// ------------------------------------------------------------
+// Dachrinnen und Fallrohre an Zwischengebäude, Pavillon und Anbau (gleiche Bauart wie am Hauptgebäude: halbrunde Rinne mit
+// Halbring-Haltern knapp vor der Dachkante, Endkappen, Fallrohre mit Rohrschellen: unter dem Rinnenauslauf 45° zurück zur
+// Wand, dann senkrecht zum Boden)
+//   Zwischengebäude: Rinne vorn und hinten; vier Fallrohre in den Innenecken (Pavillon / Türmchen vorn, Pavillon / linker Flügel hinten)
+//   Pavillon: Rinne vorn und hinten (Walmdach, gleiche Traufhöhe rundum); die Längsseiten entwässern auf das Anbau- bzw.
+//             Zwischengebäudedach. Je zwei Fallrohre an den Wandecken vorn und hinten
+//   Anbau: Rinne an der Rückseite, an der linken Walmkante, an der Vorderkante des Türanbaus und an Seite und Front des
+//          Flachdachs; Fallrohre im Winkel Türanbau / vorderer Teil, hinten am Pavillon und vorn in der Innenecke zum Pavillon
+// Dazu ein brauner Dachkasten unter der Dachhaut des Anbaus (Rückseite, linke Kante, Vorderkante des Türanbaus). Sparren sind am Anbau
+// nicht zu sehen.
+// ------------------------------------------------------------
+RINNE_NEBEN   = true;
+C_DK_ANN      = [0.36, 0.24, 0.15];   // brauner Dachkasten am Anbau
+
+// Fallrohr unter dem Rinnenauslauf (xo, yo, zo = Rinnenachse): senkrecht an der Wand bei (xw, yw), darüber 45° zurück zum Auslauf
+// (wx, wy: Richtung zur Wand für die Rohrschellen)
+module fr_neben(xo, yo, zo, xw, yw, wx, wy) {
+    zn = zo - RINNE_R - FR_R + 0.01;
+    d  = sqrt(pow(xo - xw, 2) + pow(yo - yw, 2));
+    zq = zn - d;
+    translate([xw, yw, FR_Z0]) cylinder(r = FR_R, h = zq - FR_Z0, $fn = 24);
+    rohr_stueck([xw, yw, zq], [xo, yo, zn]);
+    translate([xo, yo, zn - 0.03]) cylinder(r = FR_R, h = 0.03, $fn = 24);
+    for (z = [FR_Z0 + 0.4 : FR_SCHELLE : zq - 0.1])
+        hull() {
+            translate([xw, yw, z]) cylinder(r = FR_R + 0.012, h = 0.03, $fn = 20);
+            translate([xw + wx * (FR_R + FR_WAND + 0.01), yw + wy * (FR_R + FR_WAND + 0.01), z]) cylinder(r = 0.012, h = 0.03, $fn = 8);
+        }
+}
+
+// ---- Zwischengebäude
+zr_zax = h_wing - o_wing * tan(a_wing) + 0.03;                // Rinnenachse (knapp über der Dachkante)
+zr_yf  = y_wing[0] - o_wing - 0.01;                           // Rinne vorn
+zr_yb  = y_wing[1] + o_wing + 0.01;                           // Rinne hinten
+zr_xs  = x_pav1 + 0.02;                                       // Anfang am Pavillon
+zr_xv  = x_tt0 - 0.05;                                        // vorn endet die Rinne am Türmchen
+zr_xh  = x_mb1 - 0.02;                                        // hinten am linken Flügel
+module rinnen_zwischen() {
+    rinne_gerade(zr_xs, zr_xv, zr_yf, zr_zax);
+    rinne_gerade(zr_xs, zr_xh, zr_yb, zr_zax);
+    if (FALLROHR_PAV_RECHTS_VORN)
+        fr_neben(x_pav1 + FR_R + FR_WAND, zr_yf, zr_zax, x_pav1 + FR_R + FR_WAND, y_wing[0] - FR_R - FR_WAND, -1, 0);   // vorn links: Innenecke Pavillon (entfällt)
+    fr_neben(x_tt0 - FR_R - FR_WAND,  zr_yf, zr_zax, x_tt0 - FR_R - FR_WAND,  y_wing[0] - FR_R - FR_WAND,  1, 0);   // vorn rechts: Innenecke Türmchen
+    if (!FALLROHR_GLEIS_NUR_LISTE)   // Gleisseite: Innenecke Pavillon hinten nicht in der Liste
+        fr_neben(x_pav1 + FR_R + FR_WAND, zr_yb, zr_zax, x_pav1 + FR_R + FR_WAND, y_wing[1] + FR_R + FR_WAND, -1, 0);   // hinten links: Innenecke Pavillon
+    fr_neben(x_mb1 - FR_R - FR_WAND,  zr_yb, zr_zax, x_mb1 - FR_R - FR_WAND,  y_wing[1] + FR_R + FR_WAND,  1, 0);   // hinten rechts: Innenecke linker Flügel
+}
+
+// ---- Pavillon (Walmdach)
+pr_oe  = o_pav * tan(a_pav) / tan(a_pav_e);                   // Überstand der Walmseiten vorn / hinten (gleiche Traufhöhe rundum)
+pr_zax = h_pav - o_pav * tan(a_pav) + 0.03;
+pr_yf  = y_pav[0] - pr_oe - 0.01;
+pr_yb  = y_pav[1] + pr_oe + 0.01;
+pr_xl  = x_pav0 - o_pav - 0.01;
+pr_xr  = x_pav1 + o_pav + 0.01;
+module rinnen_pavillon() {
+    rinne_gerade(pr_xl, pr_xr, pr_yf, pr_zax);
+    rinne_gerade(pr_xl, pr_xr, pr_yb, pr_zax);
+    for (xw = [x_pav0 + FR_R + FR_WAND, x_pav1 - FR_R - FR_WAND]) {
+        if (xw < x_pav0 + 1 || FALLROHR_PAV_RECHTS_VORN)                      // vorn rechts (Außenecke) entfällt
+            fr_neben(xw, pr_yf, pr_zax, xw, y_pav[0] - FR_R - FR_WAND, 0,  1);    // vorn, an der Frontwand
+        if (!FALLROHR_GLEIS_NUR_LISTE || xw > x_pav0 + 1)                     // hinten: nur die Außenecke links (von der Gleisseite gesehen = x_pav1)
+            fr_neben(xw, pr_yb, pr_zax, xw, y_pav[1] + FR_R + FR_WAND, 0, -1);    // hinten, an der Rückwand
+    }
+    fr_ausguss_strasse(x_pav0 + FR_R + FR_WAND, y_pav[0] - FR_R - FR_WAND);   // vorn links: unten Öffnung zur Straße
+}
+
+// ---- Anbau: Maße des Daches wie in ann_dach()
+an_xl = x_ann0 - o_ann;  an_xm = x_ann1 - o_ann;  an_xr = x_pav0;
+an_yb = y_ann[1] + o_ann;  an_yf = y_anns - o_ann;  an_yv = y_ann[0] - o_ann;
+an_yr = y_ann[1] - ANN_FIRST_ANTEIL * (y_ann[1] - y_anns);
+an_zE = h_ann - ANN_TRAUFE_ABSENK;
+an_zFE = h_ann + ANN_FLACH_RAND;
+an_zJ  = an_zFE + ANN_FLACH_ABFALL;
+an_zR  = an_zE + tan(ANN_DACH_NEIGUNG) * (an_yb - an_yr);
+an_gz  = 0.03;                                                // Rinnenachse über der Dachkante
+module rinnen_anbau() {
+    gx = an_xl - 0.01;  gxm = an_xm - 0.01;  gyb = an_yb + 0.01;  gyf = an_yf - 0.01;  gyv = an_yv - 0.01;
+    rinne_gerade(gx, an_xr, gyb, an_zE + an_gz);                                                   // Rückseite
+    rinne_dir([gx, gyb, an_zE + an_gz], [gx, gyf, an_zJ + an_gz], RINNE_R);                        // linke Walmkante (steigt zur Front)
+    rinne_kappe([gx, gyb, an_zE + an_gz], RINNE_R);  rinne_kappe([gx, gyf, an_zJ + an_gz], RINNE_R);
+    rinne_gerade(gx, gxm, gyf, an_zJ + an_gz);                                                     // Vorderkante des Türanbaus
+    rinne_dir([gxm, gyf, an_zJ + an_gz], [gxm, gyv, an_zFE + an_gz], RINNE_R);                     // linke Kante des Flachdachs (fällt zur Front)
+    rinne_kappe([gxm, gyf, an_zJ + an_gz], RINNE_R);  rinne_kappe([gxm, gyv, an_zFE + an_gz], RINNE_R);
+    rinne_gerade(gxm, an_xr, gyv, an_zFE + an_gz);                                                 // Vorderkante des Flachdachs
+    // Fallrohre
+    if (FALLROHR_ANN_TUERWINKEL)                                                                    // Winkel Türanbau / vorderer Teil: kein Fallrohr
+        fr_neben(gxm, gyf, an_zJ + an_gz, x_ann1 - 0.085, y_anns - FR_R - FR_WAND, 0, 1);
+    if (!FALLROHR_GLEIS_NUR_LISTE)                                                                  // Gleisseite: hinten am Pavillon nicht in der Liste
+        fr_neben(x_pav0 - FR_R - FR_WAND, gyb, an_zE + an_gz, x_pav0 - FR_R - FR_WAND, y_ann[1] + FR_R + FR_WAND, 0, -1);   // hinten am Pavillon
+    if (FALLROHR_ANN_GIEBEL_HINTEN)                                                                 // Gleisseite: Giebelecke des Anbaus (im Foto rechts)
+        fr_neben(gx, gyb, an_zE + an_gz, x_ann0 + FR_R + FR_WAND, y_ann[1] + FR_R + FR_WAND, 0, -1);
+    fr_neben(x_pav0 - FR_R - FR_WAND, gyv, an_zFE + an_gz, x_pav0 - FR_R - FR_WAND, y_ann[0] - FR_R - FR_WAND, 0, 1);       // vorn, Innenecke zum Pavillon
+    fr_boden_zum_pavillon();                                                                        // von dort am Boden nach vorn zum Pavillon-Fallrohr
+}
+
+// Brauner Dachkasten am Anbau: Platte unter der Dachhaut entlang der Dachkante (parallel zur Dachfläche), Oberkante = Unterseite der Dachhaut
+// p0, p1: Traufkante (Oberkante Dachhaut), n: Richtung zur Wand in der Draufsicht, sl: Anstieg der Dachfläche zur Wand hin
+module dk_ann_platte(p0, p1, n, sl) {
+    dka = DK_G / cos(atan(sl));
+    s0 = DK_G_UE;  s1 = o_ann + DK_EIN;
+    hull() for (q = [p0, p1]) for (s = [s0, s1]) {
+        zt = q[2] + sl * s - td + 0.004;
+        translate([q[0] + n[0] * s, q[1] + n[1] * s, zt]) cube(eps);
+        translate([q[0] + n[0] * s, q[1] + n[1] * s, zt - dka]) cube(eps);
+    }
+}
+module dachkasten_anbau() {
+    sl_h = tan(ANN_DACH_NEIGUNG);
+    sl_v = (an_zR - an_zJ) / (an_yr - an_yf);
+    dk_ann_platte([an_xl, an_yb, an_zE], [an_xr, an_yb, an_zE], [0, -1], sl_h);        // Rückseite
+    dk_ann_platte([an_xl, an_yb, an_zE], [an_xl, an_yf, an_zJ], [1, 0], sl_h);         // linke Walmkante
+    dk_ann_platte([an_xl, an_yf, an_zJ], [an_xm, an_yf, an_zJ], [0, 1], sl_v);         // Vorderkante des Türanbaus
+    // Flachdach vor dem Türanbau: linke Kante (quer flach, fällt zur Front) und Vorderkante (fällt nach vorn, steigt zur Wand)
+    sl_f = ANN_FLACH_ABFALL / (an_yf - an_yv);
+    dk_ann_platte([an_xm, an_yf, an_zJ], [an_xm, an_yv, an_zFE], [1, 0], 0);           // linke Kante des Flachdachs
+    dk_ann_platte([an_xm, an_yv, an_zFE], [an_xr, an_yv, an_zFE], [0, 1], sl_f);       // Vorderkante des Flachdachs
+}
+// Fallrohre vorn am Pavillon: Rinnenwinkel Anbau/Pavillon läuft am Boden nach vorn und endet im Fallrohr an der Pavillon-Frontwand,
+// dessen Rohrende unten eine Öffnung zur Straße hat (Vorbild: Foto)
+// Gleisseite: Fallrohre nur in den Innenecken des gleisseitigen Mittelrisalits (beidseitig), an der Außenecke links des Pavillons
+// (von der Gleisseite aus gesehen) und in der Innenecke Zwischengebäude / Hauptgebäude. Alle anderen Fallrohre der Gleisseite sind
+// abgeschaltet; die Straßenseite ist davon nicht betroffen.
+FALLROHR_GLEIS_NUR_LISTE = true;
+FALLROHR_ANN_GIEBEL_HINTEN = true;   // Gleisseite: Fallrohr an der Giebelecke des Anbaus (links im Modell, rechts im Foto)
+FALLROHR_ANN_TUERWINKEL = false;     // true: Fallrohr in der Innenecke zwischen Türanbau und vorderem Wandteil des Anbaus
+FALLROHR_PAV_RECHTS_VORN = false;   // true: auch das Fallrohr an der rechten Außenecke des Pavillons und in der Innenecke zum Zwischenbau (vorn)
+FR_AUSGUSS = 0.20;                  // Länge des Ausgussstutzens zur Straße
+FR_ZB      = FR_Z0 + FR_R;          // Rohrachse am Boden
+module fr_boden_zum_pavillon() {
+    xa = x_pav0 - FR_R - FR_WAND;   ya = y_ann[0] - FR_R - FR_WAND;       // unten am Anbau-Fallrohr (Innenecke)
+    yv = y_pav[0] - FR_R - FR_WAND; xp = x_pav0 + FR_R + FR_WAND;          // unten am Pavillon-Fallrohr
+    pts = [[xa, ya, FR_ZB], [xa, yv, FR_ZB], [xp, yv, FR_ZB]];
+    for (p = pts) translate(p) sphere(r = FR_R, $fn = 20);
+    for (i = [0 : len(pts) - 2]) rohr_stueck(pts[i], pts[i + 1]);
+}
+module fr_ausguss_strasse(x, y) {   // Krümmer unten am Fallrohr + offener Stutzen zur Straße (-y)
+    translate([x, y, FR_ZB]) {
+        sphere(r = FR_R, $fn = 20);
+        rotate([90, 0, 0]) difference() {
+            cylinder(r = FR_R, h = FR_AUSGUSS, $fn = 24);
+            translate([0, 0, FR_AUSGUSS - 0.08]) cylinder(r = FR_R - 0.012, h = 0.09, $fn = 24);
+        }
+    }
+}
+
+// ---- Türmchen: Rinne an der tiefen Dachkante des Pultdachs (Dach fällt nach links, weg vom Turm)
+tz_x = x_tt0 - o_tt - 0.01;
+tz_z = h_tt + 0.03;
+module rinnen_tuermchen() {
+    rinne_y(y_tt0 - o_tt, y_tt1, tz_x, tz_z);
+    rinne_kappe([tz_x, y_tt0 - o_tt, tz_z], RINNE_R);  rinne_kappe([tz_x, y_tt1, tz_z], RINNE_R);
+}
+
+// ---- Hauptturm: Rinne rundum an der Traufe des Zeltdachs, ein Fallrohr an der hinteren linken Ecke (von der Gleisseite gesehen,
+// also x_tow1 / y_tow[1]). Es läuft an der Turmecke hinunter und endet offen knapp über der Dachfläche des Eingangsrisalits.
+RINNE_TURM = true;
+tr_zax = z_lant1 - o_tow * tan(a_tow) + 0.03;
+tr_x0 = x_tow0 - o_tow - 0.01;  tr_x1 = x_tow1 + o_tow + 0.01;
+tr_y0 = y_tow[0] - o_tow - 0.01; tr_y1 = y_tow[1] + o_tow + 0.01;
+FR_DACH_ABSTAND = 0.30;       // Rohrende über der Dachfläche
+// Fallrohr vom Rinnenwinkel (xo, yo, zo) 45° zurück zur Turmecke (xw, yw), dann senkrecht bis z_end; offenes Ende
+module fr_dach_ende(xo, yo, zo, xw, yw, z_end) {
+    zn = zo - RINNE_R - FR_R + 0.01;
+    d  = sqrt(pow(xo - xw, 2) + pow(yo - yw, 2));
+    zq = zn - d;
+    translate([xw, yw, z_end]) difference() {
+        cylinder(r = FR_R, h = zq - z_end, $fn = 24);
+        translate([0, 0, -0.01]) cylinder(r = FR_R - 0.012, h = 0.1, $fn = 24);   // offenes Ende
+    }
+    rohr_stueck([xw, yw, zq], [xo, yo, zn]);
+    translate([xo, yo, zn - 0.03]) cylinder(r = FR_R, h = 0.03, $fn = 24);
+    for (z = [z_end + 0.4 : FR_SCHELLE : zq - 0.1])
+        hull() {
+            translate([xw, yw, z]) cylinder(r = FR_R + 0.012, h = 0.03, $fn = 20);
+            translate([x_tow1, y_tow[1], z]) cylinder(r = 0.012, h = 0.03, $fn = 8);
+        }
+}
+module rinnen_turm() {
+    rinne_gerade(tr_x0, tr_x1, tr_y0, tr_zax);  rinne_gerade(tr_x0, tr_x1, tr_y1, tr_zax);
+    rinne_y(tr_y0, tr_y1, tr_x0, tr_zax);       rinne_y(tr_y0, tr_y1, tr_x1, tr_zax);
+    for (x = [tr_x0, tr_x1]) for (y = [tr_y0, tr_y1]) rinne_kappe([x, y, tr_zax], RINNE_R);
+    xw = x_tow1 + FR_R;  yw = y_tow[1] + FR_R;      // Rohrmantel direkt an der Turmwand (kein Abstand, besser druckbar)
+    z_dach = ze_ris + (xw - x_ris0) * tan(a_ris);             // Dachfläche des Eingangsrisalits (linke Seite, am Turm)
+    fr_dach_ende(tr_x1, tr_y1, tr_zax, xw, yw, z_dach + FR_DACH_ABSTAND);
+}
+
+module rinnen_neben() {
+    rinnen_zwischen();
+    rinnen_pavillon();
+    if (ANBAU) rinnen_anbau();
+    if (TUERMCHEN) rinnen_tuermchen();
+    if (RINNE_TURM) rinnen_turm();
 }
 
 // Fahnenmast auf dem Dachfirst mit Knubbel am Ende. Höhe über dem Firstpunkt = Höhe der Türoberkante über Gelände.
@@ -1687,6 +1933,12 @@ module dk_ecke_clip(cx, cy, sx, sy, teil) {
         translate([0, 0, -10]) linear_extrude(100) polygon([for (p = pk) [cx + sx * p[0], cy + sy * p[1]]]);
     }
 }
+module dk_clip_plan(pts) {   // beschneidet die Kinder auf einen Grundriss-Polygonzug (Gehrung an den Walmgraten des Pavillons)
+    intersection() {
+        children();
+        translate([0, 0, -10]) linear_extrude(100) polygon(pts);
+    }
+}
 DK_ECKE = o_main_end - DK_G_UE;   // Traufplatten reichen an den Giebelwänden so weit über die Wandflucht hinaus (bis unter die Dachecke), sonst bleibt dort eine Lücke
 module dachkasten() {
     color(C_HOLZ) {
@@ -1708,6 +1960,34 @@ module dachkasten() {
                 dk_traufe_y(y_main[1] - 0.05, y_rh[1] + (o_ris - DK_G_UE), ris_h_x1,  1, a_ris_h, o_ris_t, h_ris, ze_ris);   // bis unter die Dachecke (Giebelüberstand)
         } else
             dk_traufe_x(x_lw0 - DK_ECKE, x_end + DK_ECKE, y_main[1], 1, a_main, o_main, h_main, ze_main);
+
+    }
+    // Zwischengebäude und Pavillon: brauner Dachkasten (nur Hauptgebäude und Turm sind grün)
+    color(C_DK_ANN) {
+        // Zwischengebäude: die beiden Traufen (vorn und hinten), Platte sitzt auf dem Zahnfries (Oberkante h_zw)
+        dk_traufe_x(x_pav1, x_mb1, y_wing[0], -1, a_wing, o_wing, h_wing - td - DKP_ZW, h_wing);
+        dk_traufe_x(x_pav1, x_mb1, y_wing[1],  1, a_wing, o_wing, h_wing - td - DKP_ZW, h_wing);
+
+        // Pavillon (Walmdach): lange Traufen links/rechts (a_pav) und die beiden Walmseiten vorn/hinten (a_pav_e). An den Ecken stoßen
+        // die Platten auf Gehrung entlang der Walmgrate (Grat verläuft von der Wandecke zur Dachecke).
+        pav_h0 = h_pav - td - DKP_PAV;                 // Unterkante der Platten an der Wand
+        pav_oe = o_pav * tan(a_pav) / tan(a_pav_e);    // Überstand der Walmseiten (wie in walm_y)
+        pav_dm = o_pav + 1;
+        pav_tk = tan(a_pav) / tan(a_pav_e);
+        // links (x_pav0) und rechts (x_pav1): Grat-Gehrung in y
+        for (sd = [-1, 1]) {
+            xw = sd < 0 ? x_pav0 : x_pav1;
+            dk_clip_plan([[xw - sd, y_pav[0]], [xw, y_pav[0]], [xw + sd * pav_dm, y_pav[0] - pav_dm * pav_tk],
+                          [xw + sd * pav_dm, y_pav[1] + pav_dm * pav_tk], [xw, y_pav[1]], [xw - sd, y_pav[1]]])
+                dk_traufe_y(y_pav[0] - pav_oe, y_pav[1] + pav_oe, xw, sd, a_pav, o_pav, pav_h0, h_pav);
+        }
+        // vorn (y_pav[0]) und hinten (y_pav[1]): Grat-Gehrung in x
+        for (sd = [-1, 1]) {
+            yw = sd < 0 ? y_pav[0] : y_pav[1];
+            dk_clip_plan([[x_pav0, yw - sd], [x_pav0, yw], [x_pav0 - pav_dm / pav_tk, yw + sd * pav_dm],
+                          [x_pav1 + pav_dm / pav_tk, yw + sd * pav_dm], [x_pav1, yw], [x_pav1, yw - sd]])
+                dk_traufe_x(x_pav0 - o_pav, x_pav1 + o_pav, yw, sd, a_pav_e, pav_oe, pav_h0, h_pav);
+        }
     }
     // Füllung unter dem Dach (schließt das Mauerwerk bis zur Dachhaut), wandbündig und ausdrücklich in Ziegelfarbe
     for (it = [3, 6, 4, RIS_H_IDX]) if (it >= 0) {
@@ -3366,10 +3646,11 @@ module zw_zahnfries(z0, z1, j0) {
 //   ann_fl_r: Front des zurückspringenden linken Teils (außen -y), nur die Tür (kein Fenster)  u = x - x_ann0
 //   ann_fl_g: linke Giebelwand des linken Teils (außen -x),            u = y_ann[1] - y
 // ============================================================
-ANN_F_B       = 1.0;     // Gitterfenster in der Front: lichte Breite
-ANN_F_ABSTAND = 1.9;     // Mitte zu Mitte
-ANN_F_SOHLE   = 1.85;    // Sohle über Gelände (wird ins Ziegelraster gerundet)
-ANN_F_ZEILEN  = 29;      // Höhe in Ziegelreihen
+ANN_F_B       = 1.30;    // Gitterfenster in der Front: lichte Breite (am Foto gemessen: 1,29 / 1,35 / 1,32 m)
+ANN_F_ABSTAND = 2.78;    // Mitte zu Mitte (Foto: 2,75 und 2,81 m)
+ANN_F_VERSATZ = 0.45;    // mittleres Fenster liegt um so viel rechts (zum Pavillon) von der Mitte des vorderen Teils (Foto: Mitten bei 2,16 / 4,91 / 7,73 m von der linken Kante)
+ANN_F_SOHLE   = 1.55;    // Sohle über Gelände (Foto: ca. 1,5 bis 1,6 m; wird ins Ziegelraster gerundet)
+ANN_F_ZEILEN  = 23;      // Höhe in Ziegelreihen (Foto: ca. 1,7 m = 22,5 Reihen)
 ANN_S_B       = 0.9;     // seitliches Fenster in der Sprungwand des vorderen Teils: Breite
 ANN_S_SOHLE   = 3.0;     // Sohle (hoch gelegen)
 ANN_S_ZEILEN  = 12;      // Höhe in Ziegelreihen
@@ -3388,28 +3669,29 @@ ANN_TREPPE_STEIGUNGEN = 3;      // Steigungen vom Boden bis zum Podest (je 2 Zie
 ANN_TREPPE_AUFTRITT   = 0.30;
 ANN_GEL_HOEHE         = 0.90;   // Geländerhöhe über Podest / Stufen
 
-// ---------- Gleisseite des Anbaus (Rückwand y_ann[1], außen +y): 8 Fenster ----------
+// ---------- Gleisseite des Anbaus (Rückwand y_ann[1], außen +y): 5 Fenster ----------
 ANBAU_RUECKFENSTER = true;
 ANN_H_N         = 5;      // Anzahl Fenster
-ANN_H_B         = 0.70;   // lichte Breite (nicht aus dem Foto gemessen)
-ANN_H_RAND      = 0.55;   // Abstand der äußeren Fenster zu den Wandenden (gemessen bis Fensterkante)
-ANN_H_ZEILEN_BS = 22;     // Fensterunterkante: Ziegelreihen über dem Bahnsteig
+ANN_H_B         = 0.70;   // lichte Breite (Foto: ca. 0,69 m, aus der Ziegellänge)
+ANN_H_RAND_PAV  = 1.60;   // Abstand des ersten Fensters zur Pavillonwand (bis Fensterkante); Foto: ca. 0,8 Fensterabstände
+ANN_H_RAND_GIE  = 0.90;   // Abstand des letzten Fensters zur Giebelecke (x_ann0); Foto: ca. 0,45 Fensterabstände
+ANN_H_ZEILEN_BS = 21;     // Fensterunterkante: Ziegelreihen über dem Bahnsteig (Foto: ca. 20 Reihen bis zur Unterkante der Rollschicht-Bank, plus Bank)
+ANN_H_ZEILEN    = 16;     // Höhe der Fensteröffnung in Ziegelreihen (Foto: ca. 16 Reihen = 1,2 m)
 ANN_H_ZEILEN_TR = 8;      // Ziegelreihen zwischen Traufkante (Wandkopf) und Oberkante der Fensteröffnung (der 3-reihige Sturz sitzt darin)
 ANN_H_BANK_VOR  = 0.06;   // Vorsprung der Rollschicht-Fensterbank vor der Wand [m real]
 // u wird von der Pavillonseite (x_pav0) nach links (Giebel x_ann0) gemessen
 ann_fl_h = m_h(x_pav0, y_ann[1]);
 ann_hw   = x_pav0 - x_ann0;                                              // Länge der Gleisseite des Anbaus
-ann_hp   = (ann_hw - ANN_H_B - 2 * ANN_H_RAND) / (ANN_H_N - 1);         // Fensterabstand Mitte zu Mitte
-ann_hu   = [for (i = [0 : ANN_H_N - 1]) ANN_H_RAND + ANN_H_B / 2 + i * ann_hp];
+ann_hp   = (ann_hw - ANN_H_B - ANN_H_RAND_PAV - ANN_H_RAND_GIE) / (ANN_H_N - 1);   // Fensterabstand Mitte zu Mitte (ca. 1,9 m)
+ann_hu   = [for (i = [0 : ANN_H_N - 1]) ANN_H_RAND_PAV + ANN_H_B / 2 + i * ann_hp];
 ann_hz0  = ann_raster(bs_h + ANN_H_ZEILEN_BS * Z_PZ);                    // Fensterunterkante: ANN_H_ZEILEN_BS Reihen über der Bahnsteigoberkante bs_h
-function ann_hh(u) = let(k = round((ann_z(x_pav0 - u) - z_y0) / Z_PZ) - ANN_H_ZEILEN_TR)
-                     z_y0 + k * Z_PZ - Z_FUGE - ann_hz0;                 // Oberkante: ANN_H_ZEILEN_TR Reihen unter dem Wandkopf
+function ann_hh(u) = ANN_H_ZEILEN * Z_PZ - Z_FUGE;                 // Oberkante: ANN_H_ZEILEN_TR Reihen unter dem Wandkopf
 ann_fl_v = m_v(x_ann1, y_ann[0]);
 ann_fl_s = m_l(y_anns, x_ann1);
 ann_fl_r = m_v(x_ann0, y_anns);
 ann_fl_g = m_l(y_ann[1], x_ann0);      // linke Giebelwand des linken Teils (außen -x), u = y_ann[1] - y
 function ann_raster(z) = z_y0 + round((z - z_y0) / Z_PZ) * Z_PZ;   // auf eine Ziegelreihe runden
-ann_f_u  = [for (i = [-1 : 1]) ANN_BREITE / 2 + i * ANN_F_ABSTAND];   // Fenstermitten der Front (u), symmetrisch
+ann_f_u  = [for (i = [-1 : 1]) ANN_BREITE / 2 + ANN_F_VERSATZ + i * ANN_F_ABSTAND];   // Fenstermitten der Front (u), gemessen ab der linken Kante des vorderen Teils
 ann_fz0  = ann_raster(ANN_F_SOHLE);   ann_fh = ANN_F_ZEILEN * Z_PZ - Z_FUGE;
 ann_sz0  = ann_raster(ANN_S_SOHLE);   ann_sh = ANN_S_ZEILEN * Z_PZ - Z_FUGE;
 ann_wz0  = ann_raster(ANN_W_SOHLE);   ann_wh = ANN_W_ZEILEN * Z_PZ - Z_FUGE;
@@ -3773,11 +4055,14 @@ scale(1000 / M) {
     turm_pfosten();
     turm_holz();
     if (DACHKASTEN) { dachkasten(); color(C_HOLZ) giebel_kasten_alle(); }
+    if (DACHKASTEN && ANBAU) color(C_DK_ANN) dachkasten_anbau();
     if (TURM_QUERBALKEN) turm_querbalken();
     if (SPARREN) color(C_SPARREN) sparren_alle();
     if (SPARREN_GIEBEL) color(C_SPARREN) giebel_sparren_alle();
+    if (SPARREN && PAV_SPARREN) color(C_SPARREN) pavillon_sparren();
     if (RINNE)   color(C_RINNE)   rinne_alle();
     if (RINNE_STRASSE) color(C_RINNE) strassen_rinnen();
+    if (RINNE_NEBEN) color(C_RINNE) rinnen_neben();
     if (MAST)    fahnenmast();
     if (TURM_BAND_OBEN)
         let(k = TURM_K_BAND2, z0 = tw_z(k)) color(C_BAND) band(z0, z0 + Z_H, pf, nb + k);
