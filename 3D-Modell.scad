@@ -606,7 +606,11 @@ TUERMCHEN              = true;
 TT_TUER                = true;    // Tür mit Podest, Treppe und Geländer an der linken Seite
 TT_FENSTER             = true;    // Fenster über der Tür
 TT_RUECKSPRUNG = 0.13;            // Aufmaß z3: Front gegenüber der Turmfront zurückgesetzt [m]
-TT_TIEFE       = 2.94;            // Aufmaß s: Vorsprung des Türmchens vor dem linken Flügel [m]
+TT_UEBERLAPP   = 0.21;            // Türmchen reicht so weit hinter die Front des linken Flügels (steckt in der 0,35 m dicken Wand, unsichtbar)
+// Aufmaß s = Vorsprung des Türmchens vor dem linken Flügel = z4 + u - z3 = 1,24 + 1,62 - 0,13 = 2,73 m. Er ergibt sich aus der Kette
+// Flügelfront -> Risalit -> Turm -> Türmchen und ändert sich deshalb NICHT, wenn p (und damit y_main[0]) geändert wird.
+// Die Modelltiefe (2,73 + Überlappung = 2,94) wird deshalb aus der Kette berechnet:
+TT_TIEFE       = (y_main[0] - (y_tow0 + TT_RUECKSPRUNG)) + TT_UEBERLAPP;   // Tiefe des Türmchens [m]
 TT_IDX      = 7;                  // Index des Türmchens in bloecke_liste
 ANN_IDX     = [0, TUERMCHEN ? 8 : 7];   // Indizes der beiden Anbau-Teile in bloecke_liste (vorn, hinten)
 TT_TUER_WI  = 0.90;               // lichte Weite der Tür (gerade Tür mit Sturz, nach Foto)
