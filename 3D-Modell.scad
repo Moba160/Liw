@@ -3,7 +3,7 @@
 // Stufe 1: Gebäudehülle (Wände + Dächer), ohne Fenster/Türen
 // ------------------------------------------------------------
 // Alle Gebäudemaße unten sind ECHTE Meter (aus Foto/Zeichnung
-// geschätzt). Am Ende wird alles auf Modell-mm skaliert.
+// geschätzt). Am Ende wird alles ddddauf Modell-mm skaliert.
 // Koordinaten:  x = entlang der Fassade (links -> rechts)
 //               y = Tiefe (y=0 Straßenseite, +y Richtung Gleise)
 //               z = Höhe (z=0 Gelände / Oberkante Sockel)
@@ -362,12 +362,12 @@ TUER_X    = WAND_MITTE;             // Türmitte entlang der Fassade: ebenfalls 
 
 // ---------- Tiefen (y): Vorderkante / Rückseite ----------
 y_pav  = [0.0, 11.47];     // Pavillon steht vor
-// y_wing (Zwischengebäude) steht weiter unten, nach y_main: Seine Front liegt 0,14 m vor der Front des Hauptgebäudes (p = 9,75)
+// y_wing (Zwischengebäude) steht weiter unten, nach y_main: Seine Front fluchtet mit der Front des Hauptgebäudes (p = 9,89)
 // Aufmaß: y-Richtung. Pavillon-Tiefe n; Zwischengebäude: Front z1, Rückseite y vor der Pavillon-Rückwand;
                           // der Front des Mittelrisalit (Eingangsrisalit)s, in Läufern: 4 Läufer + 3 Stoßfugen = 1,03 m
 // Hauptgebäude: Rückseite z hinter der Rückseite des Zwischengebäudes, Tiefe p; Risalit z4 vor dem Flügel
 y_wing = [1.88, y_pav[1] - 0.47];   // Aufmaß z1 (Front) und y (Rückseite)
-y_main = [y_wing[1] + 0.77 - 9.75, y_wing[1] + 0.77];   // Aufmaß z = 0,77 (Rückseite), p = 9,75 (Tiefe ohne Risalite, Aufmaß R; Front liegt damit 0,14 m hinter y_wing[0])
+y_main = [y_wing[1] + 0.77 - 9.89, y_wing[1] + 0.77];   // Aufmaß z = 0,77 (Rückseite), p = 9,89 (Tiefe ohne Risalite, vom Maßnehmer bestätigt; Front fluchtet damit mit y_wing[0])
 y_ris0 = y_main[0] - 1.24;   // Aufmaß z4: Front des Mittelrisalits
 y_hg   = y_main[0];
 
@@ -397,13 +397,15 @@ ANN_TRAUFE_REIHEN = 45;   // Traufkante des Anbaus: Oberkante der letzten Ziegel
 h_ann   = z_y0 + ANN_TRAUFE_REIHEN * Z_PZ - Z_FUGE;   // Anbau: Wandkopf = Traufkante, umlaufend waagerecht (auf dem Ziegelraster)
 a_ann   = 0;       // Anbau: Dachneigung (0 = flach, Traufkante überall gleich hoch; > 0 neigt das Dach nach links und die Traufe schräg)
 o_ann   = 0.5;     // Anbau: Dachüberstand
-// Dach des Anbaus (nach Luftbild und Maßskizze): sehr flaches Walmdach mit kleinem rechteckigem Plateau am Pavillon.
-// Vom Plateau laufen Grate zu den beiden äußeren Ecken links (Gleisseite / Straßenseite) und zur Innenecke.
-ANN_PLAT_BREITE    = 6.0;    // Plateau: Ausdehnung in x, ab dem Pavillon nach links (nach Foto: breit)
-ANN_PLAT_TIEFE     = 2.4;    // Plateau: Ausdehnung in y (nach Foto: schmal)
-ANN_PLAT_RUECK     = 4.1;    // Abstand der Plateaumitte von der Rückwand (Gleisseite)
-ANN_PLAT_HUB       = 0.40;   // Plateau liegt so weit über dem Wandkopf (sehr flach)
-ANN_TRAUFE_ABSENK  = 0.03;   // Traufkante (Dachüberstand) liegt so weit unter dem Wandkopf, umlaufend waagerecht
+// Dach des Anbaus (nach Skizze): einseitiges Walmdach über dem hinteren Bereich (Gleisseite). Der First läuft parallel zur Gleisachse (x)
+// von der Walmspitze links bis zum Pavillon, nur das linke Ende ist abgewalmt. Die Längsfläche zur Straße fällt bis zur Traufhöhe des
+// Türanbaus (linker, zurückspringender Teil); davor, über dem vorderen Teil, schließt sich ein leicht zur Vorderkante abfallendes
+// Flachdach an.
+ANN_DACH_NEIGUNG   = 10;     // Neigung der geneigten Flächen (rückwärtige Längsfläche und Walm links) [Grad]
+ANN_FIRST_ANTEIL   = 0.5;    // Lage des Firsts in der Tiefe des hinteren Teils, von der Rückwand aus gesehen (0,5 = Mitte)
+ANN_FLACH_ABFALL   = 0.10;   // Flachdach: Höhenunterschied der Oberseite zwischen Anschluss an die Längsfläche und Vorderkante [m real]
+ANN_FLACH_RAND     = 0.08;   // Flachdach: Dicke an der Vorderkante. Die Unterseite des Flachdachs ist waagerecht und liegt auf dem Wandkopf, nur die Oberseite ist geneigt
+ANN_TRAUFE_ABSENK  = 0.0;    // Traufkante (Dachüberstand) der Rückseite liegt so weit unter dem Wandkopf
 function ann_z(x) = h_ann + (x - x_ann0) * tan(a_ann);   // Dachebene des Anbaus
 h_ann_h = ann_z(x_ann1);   // Wandkopf des vorderen Teils (Dachebene an dessen linker Kante)
 h_traufe = z_traufe - Z_FUGE;   // Traufhöhe laut TRAUFE_SCHEMA (Oberkante letzter Ziegel)
@@ -848,31 +850,40 @@ module ann_dach_teil(xa, y0, y1, ze, vorn, hinten, teil) {
     }
 }
 
-// Anbau-Dach: Plateau (flaches Rechteck am Pavillon) auf Höhe h_ann + ANN_PLAT_HUB. Von den beiden linken Plateau-Ecken laufen
-// Grate zu den Gebäudeecken: von der oberen (Gleisseite) zur Ecke links oben, von der unteren zur Ecke links unten (vorderer
-// Teil), zur Außenecke des linken Teils und zur Innenecke (dort eine Kehle). Jede Dachfläche ist eine ebene konvexe Hülle.
+// Anbau-Dach: Walmdach über dem hinteren Bereich (Dachhaut aus Traufrechteck und First, nur links abgewalmt) plus Flachdach über dem
+// vorderen Teil. Die Längsfläche zur Straße endet an der Vorderkante des Türanbaus (yf) auf der Höhe zJ, ab dort beginnt das
+// Flachdach: ein Keil mit waagerechter Unterseite auf dem Wandkopf und geneigter Oberseite, die bis zur Vorderkante um
+// ANN_FLACH_ABFALL abfällt. Die Mauer kann so nirgends durch die Dachfläche stoßen.
 module ann_dach(teil = "beide") {
     xl = x_ann0 - o_ann;  xm = x_ann1 - o_ann;  xr = x_pav0;      // linke Traufe, Traufe des vorderen Teils, Pavillon
-    yb = y_ann[1] + o_ann;  ys = y_anns - o_ann;  yf = y_ann[0] - o_ann;
-    xp = x_pav0 - ANN_PLAT_BREITE;
-    yc = y_ann[1] - ANN_PLAT_RUECK;
-    yp0 = yc - ANN_PLAT_TIEFE / 2;  yp1 = yc + ANN_PLAT_TIEFE / 2;
-    zE = h_ann - ANN_TRAUFE_ABSENK;  zP = h_ann + ANN_PLAT_HUB;  zB = h_ann - 0.6;
+    yb = y_ann[1] + o_ann;                                         // Traufe Rückseite (Gleisseite)
+    yf = y_anns - o_ann;                                           // Traufe Vorderkante des Türanbaus (linker Teil)
+    yv = y_ann[0] - o_ann;                                         // Traufe Vorderkante des vorderen Teils
+    yr = y_ann[1] - ANN_FIRST_ANTEIL * (y_ann[1] - y_anns);        // Firstlage
+    zE  = h_ann - ANN_TRAUFE_ABSENK;                               // Traufe Rückseite
+    zFE = h_ann + ANN_FLACH_RAND;                                  // Oberseite des Flachdachs an der Vorderkante
+    zJ  = zFE + ANN_FLACH_ABFALL;                                  // Anschluss Längsfläche / Flachdach (= Traufe des Türanbaus)
+    ta = tan(ANN_DACH_NEIGUNG);
+    zR = zE + ta * (yb - yr);                                      // Firsthöhe
+    xh = xl + (yb - yr);                                           // Ende des Firsts links (Walm gleiche Neigung)
+    zB = h_ann - 0.6;
     module pc(pts) {       // Dachfläche als Vollkörper: Oberseite aus den Punkten, unten bei zB
         hull() for (q = pts) {
             translate([q[0], q[1], q[2]]) cube(eps);
             translate([q[0], q[1], zB]) cube(eps);
         }
     }
-    module voll() {
-        pc([[xp, yp0, zP], [xr, yp0, zP], [xr, yp1, zP], [xp, yp1, zP]]);     // Plateau
-        pc([[xl, yb, zE], [xr, yb, zE], [xr, yp1, zP], [xp, yp1, zP]]);       // Rückseite (Gleisseite)
-        pc([[xm, yf, zE], [xr, yf, zE], [xr, yp0, zP], [xp, yp0, zP]]);       // Front (vorderer Teil)
-        pc([[xl, yb, zE], [xl, ys, zE], [xp, yp0, zP], [xp, yp1, zP]]);       // linke Fläche des linken Teils
-        pc([[xl, ys, zE], [xm, ys, zE], [xp, yp0, zP]]);                      // Straßenseite des linken Teils
-        pc([[xm, ys, zE], [xm, yf, zE], [xp, yp0, zP]]);                      // linke Fläche des vorderen Teils
+    module voll() {        // Walmdach (nur links abgewalmt): Traufrechteck + First
+        pc([[xl, yb, zE], [xr, yb, zE], [xr, yf, zJ], [xl, yf, zJ], [xh, yr, zR], [xr, yr, zR]]);
     }
-    if (teil != "haut")        // Kern: füllt den Raum zwischen Wandkopf und Dachhaut (nur über dem Mauerwerk)
+    module keil() {        // Flachdach: waagerechte Unterseite auf dem Wandkopf, Oberseite fällt zur Vorderkante
+        zu = h_ann - 0.003;
+        hull() for (q = [[xm, yf, zJ], [xr, yf, zJ], [xr, yv, zFE], [xm, yv, zFE]]) {
+            translate([q[0], q[1], q[2]]) cube(eps);
+            translate([q[0], q[1], zu]) cube(eps);
+        }
+    }
+    if (teil != "haut")        // Kern: füllt den Raum zwischen Wandkopf und Dachhaut des Walmdachs (nur über dem Mauerwerk)
         intersection() {
             translate([0, 0, -td/2]) voll();
             union() {
@@ -880,12 +891,14 @@ module ann_dach(teil = "beide") {
                 translate([x_ann1, y_ann[0], h_ann_h - 0.02]) cube([x_pav0 - x_ann1, y_ann[1] - y_ann[0], 3]);
             }
         }
-    if (teil != "kern")        // Dachhaut mit Überstand
+    if (teil != "kern") {      // Dachhaut mit Überstand
         difference() { voll(); translate([0, 0, -td]) voll(); }
+        keil();
+    }
 }
 
 module daecher(teil = "beide") {
-    // Anbau: flaches Walmdach mit Plateau (siehe ann_dach)
+    // Anbau: einseitiges Walmdach hinten, Flachdach vorn (siehe ann_dach)
     if (ANBAU) ann_dach(teil);
 
     // Pavillon: Walmdach
